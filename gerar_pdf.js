@@ -63,9 +63,18 @@
     const assin = await pdf.embedPng(assinaturaPng);
     const LIMITE = M.rodapeNaImagem ? 780 : 770;   // nada passa do rodapé
 
+    // tudo o que é desenhado no PDF também é anotado, para a prévia na tela (o iPhone não encolhe PDF)
+    const fontes = new Map([[times, 'normal'], [timesB, 'bold']]);
+    const imagens = new Map([[fundo, M.fundo], [assin, URL.createObjectURL(new Blob([assinaturaPng], { type: 'image/png' }))]]);
+    const paginas = [];
     let pg, y;
     const novaPagina = (topo) => {
       pg = pdf.addPage([W, H]);
+      const ops = []; paginas.push(ops);
+      for (const m of ['drawImage', 'drawText', 'drawRectangle', 'drawLine']) {
+        const original = pg[m].bind(pg);
+        pg[m] = (a, b) => { ops.push([m, a, b]); return original(a, b); };
+      }
       pg.drawImage(fundo, { x: 0, y: 0, width: W, height: H });
       if (!M.rodapeNaImagem) {
         pg.drawRectangle({ x: 0, y: 0, width: W, height: H - 785, color: rgb(0xcc / 255, 0xdf / 255, 0xdb / 255) });
@@ -130,8 +139,41 @@
       corpo(d.texto);
     }
     assinatura();
+    ultimaPrevia = { paginas, fontes, imagens };
     return pdf.save({ useObjectStreams: false });
   }
+
+  // ---------- prévia: cada folha vira uma imagem do tamanho da tela ----------
+  let ultimaPrevia = null;
+  const carregar = (src) => new Promise((ok, erro) => { const i = new Image(); i.onload = () => ok(i); i.onerror = erro; i.src = src; });
+  async function previa(larguraCss) {
+    if (!ultimaPrevia) return [];
+    const { paginas, fontes, imagens } = ultimaPrevia;
+    const cache = new Map();
+    for (const [img, src] of imagens) cache.set(img, await carregar(src));
+    const dpr = Math.min(window.devicePixelRatio || 1, 3), esc = (larguraCss / W) * dpr;
+    const cor = (c) => c ? `rgb(${Math.round(c.red * 255)},${Math.round(c.green * 255)},${Math.round(c.blue * 255)})` : '#000';
+    return paginas.map((ops) => {
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(W * esc); cv.height = Math.round(H * esc);
+      cv.style.width = larguraCss + 'px'; cv.style.height = Math.round(larguraCss * H / W) + 'px';
+      const c = cv.getContext('2d');
+      c.fillStyle = '#fff'; c.fillRect(0, 0, cv.width, cv.height);
+      c.scale(esc, esc);
+      for (const [m, a, b] of ops) {
+        if (m === 'drawImage') c.drawImage(cache.get(a), b.x, H - b.y - b.height, b.width, b.height);
+        else if (m === 'drawRectangle') { c.fillStyle = cor(a.color); c.fillRect(a.x, H - a.y - a.height, a.width, a.height); }
+        else if (m === 'drawLine') { c.strokeStyle = cor(a.color); c.lineWidth = a.thickness || 1; c.beginPath(); c.moveTo(a.start.x, H - a.start.y); c.lineTo(a.end.x, H - a.end.y); c.stroke(); }
+        else if (m === 'drawText') { c.fillStyle = cor(b.color); c.font = `${fontes.get(b.font) === 'bold' ? 'bold ' : ''}${b.size}px "Times New Roman", Times, serif`; c.fillText(a, b.x, H - b.y); }
+      }
+      return cv;
+    });
+  }
+  window.previaDocumento = previa;
+  window.limparPreviaDocumento = () => {
+    if (ultimaPrevia) for (const src of ultimaPrevia.imagens.values()) if (src.startsWith('blob:')) URL.revokeObjectURL(src);
+    ultimaPrevia = null;
+  };
 
   // ---------- proteção ----------
   const PAD = new Uint8Array([0x28,0xBF,0x4E,0x5E,0x4E,0x75,0x8A,0x41,0x64,0x00,0x4E,0x56,0xFF,0xFA,0x01,0x08,0x2E,0x2E,0x00,0xB6,0xD0,0x68,0x3E,0x80,0x2F,0x0C,0xA9,0xFE,0x64,0x53,0x69,0x7A]);
