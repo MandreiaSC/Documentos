@@ -1,5 +1,5 @@
 // Guarda o aplicativo no aparelho para funcionar sem internet. Nenhum dado de paciente passa por aqui.
-const VERSAO = 'documentos-v3';
+const VERSAO = 'documentos-v4';
 const ARQUIVOS = ['./', 'index.html', 'gerar_pdf.js', 'pdf-lib.min.js', 'assinatura.json',
   'fundo_encaminhamento.png', 'fundo_atestado.png', 'fundo_declaracao.png', 'fundo_receituario.png',
   'manifest.webmanifest', 'icone_180.png', 'icone_192.png', 'icone_512.png'];

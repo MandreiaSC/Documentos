@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="author" content="Marcia Sales">
 <meta name="copyright" content="© 2026 Marcia Sales. Todos os direitos reservados.">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -60,8 +60,11 @@
   .secundario { width:100%; height:48px; border:1.5px solid var(--verde); border-radius:12px; background:#fff; color:var(--verde); font-size:16px; font-weight:600; font-family:inherit; margin-top:10px; }
   .erro-form { color:var(--erro); font-size:14px; margin-top:12px; min-height:18px; }
   /* resultado */
-  .previa { width:100%; max-height:62vh; overflow-y:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--borda); border-radius:10px; background:#e9efee; }
-  .previa canvas { display:block; background:#fff; }
+  .previa { width:100%; max-height:62vh; overflow:auto; -webkit-overflow-scrolling:touch; touch-action:pan-x pan-y; border:1px solid var(--borda); border-radius:10px; background:#e9efee; }
+  .previa canvas { display:block; background:#fff; max-width:none; }
+  .zoom-previa { display:flex; justify-content:flex-end; align-items:center; gap:8px; margin:0 0 6px; }
+  .zoom-previa button { width:40px; height:36px; border:1.5px solid var(--borda); border-radius:10px; background:#fff; color:var(--verde); font-size:20px; font-weight:600; font-family:inherit; }
+  .zoom-previa span { min-width:48px; text-align:center; font-size:14px; color:var(--cinza); }
   .previa canvas + canvas { margin-top:6px; }
   .selo { display:flex; align-items:center; gap:8px; color:var(--verde); font-size:14px; margin:12px 0 2px; }
   .direitos { text-align:center; font-size:11px; color:#8a9a97; margin-top:26px; }
@@ -100,6 +103,7 @@
 
 <section class="tela" id="tela-pronto">
   <div class="topo"><h1>Documento pronto</h1><button class="link" onclick="mostrar('tela-form')">Voltar</button></div>
+  <div class="zoom-previa"><button type="button" onclick="zoomBotao(-1)" aria-label="Diminuir">−</button><span id="zoom-txt">100%</span><button type="button" onclick="zoomBotao(1)" aria-label="Aumentar">+</button></div>
   <div class="previa" id="previa" aria-label="Prévia do documento"></div>
   <div class="selo">&#128274; PDF trancado contra edição</div>
   <button class="principal" onclick="enviar()">Enviar</button>
@@ -110,9 +114,10 @@
 <script src="pdf-lib.min.js"></script>
 <script src="gerar_pdf.js"></script>
 <script>
-// iPhone: dois toques seguidos (ex.: "22" no PIN) não podem aumentar a tela;
-// abrir com dois dedos (pinça) continua valendo, para ler a prévia.
+// iPhone: a tela do aplicativo não amplia (nem com dois toques, ex.: "22" no PIN, nem com dois dedos).
+// Só o documento pronto amplia, com o zoom próprio da prévia.
 document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
 </script>
 <script>
   const $ = (id) => document.getElementById(id);
@@ -214,11 +219,51 @@ document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: fals
       pdfAtual = new File([bytes], base + quem + '_' + hojeISO() + '.pdf', { type: 'application/pdf' });
       urlAtual = URL.createObjectURL(pdfAtual);
       mostrar('tela-pronto');
-      const folhas = await previaDocumento($('previa').clientWidth - 2);
-      $('previa').replaceChildren(...folhas);
+      zoomPrevia = 1; larguraBase = $('previa').clientWidth - 2;
+      $('previa').replaceChildren(...await previaDocumento(larguraBase));
+      $('zoom-txt').textContent = '100%';
     } catch (e) { erro('Não foi possível gerar o PDF. Tente de novo.'); console.error(e); }
     btn.disabled = false; btn.textContent = 'Gerar PDF';
   }
+  // ---- zoom da prévia: dois dedos (pinça) ou botões − e + ----
+  let zoomPrevia = 1, larguraBase = 0, pinca = null, nitidez = null;
+  function aplicarZoom(z, cx, cy) {
+    const p = $('previa'); z = Math.min(4, Math.max(1, z));
+    const fx = (p.scrollLeft + cx) / p.scrollWidth, fy = (p.scrollTop + cy) / p.scrollHeight;
+    zoomPrevia = z;
+    const w = Math.round(larguraBase * z);
+    p.querySelectorAll('canvas').forEach((c) => { c.style.width = w + 'px'; c.style.height = Math.round(w * c.height / c.width) + 'px'; });
+    p.scrollLeft = fx * p.scrollWidth - cx; p.scrollTop = fy * p.scrollHeight - cy;
+    $('zoom-txt').textContent = Math.round(z * 100) + '%';
+  }
+  async function deixarNitido() {   // depois de ampliar, desenha de novo na resolução certa
+    clearTimeout(nitidez);
+    nitidez = setTimeout(async () => {
+      const p = $('previa'); if (!p.firstChild) return;
+      const sl = p.scrollLeft, st = p.scrollTop;
+      const folhas = await previaDocumento(Math.round(larguraBase * zoomPrevia));
+      if (folhas.length) { p.replaceChildren(...folhas); p.scrollLeft = sl; p.scrollTop = st; }
+    }, 250);
+  }
+  function zoomBotao(passo) {
+    const p = $('previa');
+    aplicarZoom(zoomPrevia + passo * 0.5, p.clientWidth / 2, p.clientHeight / 2); deixarNitido();
+  }
+  (function () {
+    const p = document.getElementById('previa');
+    const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    p.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) { const r = p.getBoundingClientRect(); pinca = { d: dist(e.touches), z: zoomPrevia,
+        cx: (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left, cy: (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top }; e.preventDefault(); }
+    }, { passive: false });
+    p.addEventListener('touchmove', (e) => {
+      if (pinca && e.touches.length === 2) { e.preventDefault(); aplicarZoom(pinca.z * dist(e.touches) / pinca.d, pinca.cx, pinca.cy); }
+    }, { passive: false });
+    p.addEventListener('touchend', (e) => { if (pinca && e.touches.length < 2) { pinca = null; deixarNitido(); } });
+    // no iPhone, o gesto de pinça dentro da prévia não amplia a página inteira
+    p.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
+    p.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
+  })();
   function liberarPdf() { if (urlAtual) URL.revokeObjectURL(urlAtual); urlAtual = null; pdfAtual = null; $('previa').replaceChildren(); window.limparPreviaDocumento && limparPreviaDocumento(); }
   async function enviar() {
     if (!pdfAtual) return;

@@ -151,7 +151,9 @@
     const { paginas, fontes, imagens } = ultimaPrevia;
     const cache = new Map();
     for (const [img, src] of imagens) cache.set(img, await carregar(src));
-    const dpr = Math.min(window.devicePixelRatio || 1, 3), esc = (larguraCss / W) * dpr;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    // o iPhone não desenha imagens com mais de ~16 milhões de pontos: no zoom alto, usa menos pontos
+    const esc = Math.min((larguraCss / W) * dpr, Math.sqrt(12e6 / (W * H)));
     const cor = (c) => c ? `rgb(${Math.round(c.red * 255)},${Math.round(c.green * 255)},${Math.round(c.blue * 255)})` : '#000';
     return paginas.map((ops) => {
       const cv = document.createElement('canvas');
