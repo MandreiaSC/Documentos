@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="author" content="Marcia Sales">
+<meta name="copyright" content="© 2026 Marcia Sales. Todos os direitos reservados.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Documentos RA">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#155850">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icone_180.png">
+<link rel="icon" href="icone_192.png">
+<title>Documentos — RA</title>
+<style>
+  :root { --verde:#155850; --verde2:#2f9e8f; --claro:#e7f1ef; --borda:#c9d9d5; --texto:#1f3d38; --cinza:#5f706c; --erro:#b3261e; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; }
+  body { font-family:-apple-system,'Segoe UI',system-ui,sans-serif; background:#f4f8f7; color:var(--texto); }
+  .tela { display:none; min-height:100%; padding:calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 22px); max-width:520px; margin:0 auto; }
+  .tela.ativa { display:block; }
+  /* PIN */
+  #tela-pin { text-align:center; }
+  .marca { width:72px; height:72px; border-radius:18px; margin:28px auto 12px; display:block; }
+  .nome-clinica { font-size:19px; font-weight:600; margin:0; }
+  .sub { font-size:14px; color:var(--cinza); margin:4px 0 30px; }
+  .pontos { display:flex; gap:14px; justify-content:center; margin:14px 0 8px; }
+  .pontos span { width:14px; height:14px; border-radius:50%; border:1.5px solid var(--verde); }
+  .pontos span.cheio { background:var(--verde); }
+  .pontos.tremer { animation:tremer .35s; }
+  @keyframes tremer { 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+  .msg-pin { min-height:20px; font-size:13px; color:var(--erro); margin-bottom:12px; }
+  .teclado { display:grid; grid-template-columns:repeat(3,78px); gap:14px 22px; justify-content:center; }
+  .teclado button { width:78px; height:78px; border-radius:50%; border:none; background:#fff; font-size:28px; color:var(--texto); font-family:inherit; box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .teclado button:active { background:var(--claro); }
+  .teclado .vazio { visibility:hidden; }
+  .teclado .apagar { background:transparent; box-shadow:none; font-size:15px; color:var(--cinza); }
+  /* menu */
+  .topo { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .topo h1 { font-size:21px; margin:0; color:var(--verde); }
+  .link { background:none; border:none; color:var(--verde); font-size:15px; font-family:inherit; padding:6px 0; }
+  .opcao { display:flex; align-items:center; gap:14px; width:100%; text-align:left; background:#fff; border:1.5px solid var(--borda); border-radius:14px; padding:16px; margin-bottom:12px; font-family:inherit; color:var(--texto); }
+  .opcao:active { background:var(--claro); }
+  .opcao .ic { width:42px; height:42px; border-radius:11px; background:var(--claro); color:var(--verde); display:flex; align-items:center; justify-content:center; flex:none; }
+  .opcao .ic svg { width:22px; height:22px; }
+  .opcao b { display:block; font-size:16px; }
+  .opcao small { display:block; font-size:13px; color:var(--cinza); margin-top:2px; }
+  /* formulário */
+  label { display:block; font-size:13px; font-weight:600; color:var(--cinza); margin:12px 0 5px; }
+  input,select,textarea { width:100%; font-family:inherit; font-size:16px; color:var(--texto); border:1.5px solid var(--borda); border-radius:10px; padding:11px 12px; background:#fff; outline:none; min-height:46px; -webkit-appearance:none; appearance:none; }
+  input:focus,select:focus,textarea:focus { border-color:var(--verde2); }
+  textarea { min-height:130px; resize:vertical; line-height:1.45; }
+  textarea.grande { min-height:260px; }
+  .dupla { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .principal { width:100%; height:52px; border:none; border-radius:12px; background:var(--verde); color:#fff; font-size:17px; font-weight:600; font-family:inherit; margin-top:22px; }
+  .principal:active { background:var(--verde2); }
+  .principal:disabled { opacity:.6; }
+  .secundario { width:100%; height:48px; border:1.5px solid var(--verde); border-radius:12px; background:#fff; color:var(--verde); font-size:16px; font-weight:600; font-family:inherit; margin-top:10px; }
+  .erro-form { color:var(--erro); font-size:14px; margin-top:12px; min-height:18px; }
+  /* resultado */
+  .previa { width:100%; height:62vh; border:1px solid var(--borda); border-radius:10px; background:#fff; }
+  .selo { display:flex; align-items:center; gap:8px; color:var(--verde); font-size:14px; margin:12px 0 2px; }
+  .direitos { text-align:center; font-size:11px; color:#8a9a97; margin-top:26px; }
+</style>
+</head>
+<body>
+
+<section class="tela ativa" id="tela-pin">
+  <img class="marca" src="icone_180.png" alt="">
+  <p class="nome-clinica">RA Fisioterapia e Osteopatia</p>
+  <p class="sub">Documentos</p>
+  <div style="font-size:15px;">Digite o seu PIN</div>
+  <div class="pontos" id="pontos"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="msg-pin" id="msg-pin"></div>
+  <div class="teclado" id="teclado"></div>
+  <p class="direitos">© 2026 Marcia Sales. Todos os direitos reservados.</p>
+</section>
+
+<section class="tela" id="tela-menu">
+  <div class="topo"><h1>Documentos</h1><button class="link" onclick="bloquear()">Sair</button></div>
+  <button class="opcao" onclick="abrirFormulario('encaminhamento')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M9 14h6M13 11l2 3-2 3"/></svg></span><span><b>Encaminhamento</b><small>Evolução e encaminhamento do paciente</small></span></button>
+  <button class="opcao" onclick="abrirFormulario('atestado')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M9 15l2 2 4-4"/></svg></span><span><b>Atestado fisioterapêutico</b><small>Dias de afastamento</small></span></button>
+  <button class="opcao" onclick="abrirFormulario('declaracao')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="7"/><path d="M12 10v3l2 2M9 3h6"/></svg></span><span><b>Declaração de comparecimento</b><small>Data e horário da consulta</small></span></button>
+  <button class="opcao" onclick="abrirFormulario('receituario')"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.8 2.8 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></span><span><b>Receituário</b><small>Texto livre</small></span></button>
+  <p class="direitos">© 2026 Marcia Sales. Todos os direitos reservados.</p>
+</section>
+
+<section class="tela" id="tela-form">
+  <div class="topo"><h1 id="titulo-form"></h1><button class="link" onclick="voltarAoMenu()">Voltar</button></div>
+  <div id="campos"></div>
+  <label for="f-dataDoc">Data do documento</label>
+  <input type="date" id="f-dataDoc">
+  <div class="erro-form" id="erro-form"></div>
+  <button class="principal" id="btn-gerar" onclick="gerar()">Gerar PDF</button>
+</section>
+
+<section class="tela" id="tela-pronto">
+  <div class="topo"><h1>Documento pronto</h1><button class="link" onclick="mostrar('tela-form')">Voltar</button></div>
+  <iframe class="previa" id="previa" title="Prévia do documento"></iframe>
+  <div class="selo">&#128274; PDF trancado contra edição</div>
+  <button class="principal" onclick="enviar()">Enviar</button>
+  <button class="secundario" onclick="salvar()">Salvar no aparelho</button>
+  <button class="secundario" onclick="novo()">Novo documento</button>
+</section>
+
+<script src="pdf-lib.min.js"></script>
+<script src="gerar_pdf.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  // ---------- PIN e assinatura ----------
+  let pin = '', assinatura = null, erros = 0, esperaAte = 0, pdfAtual = null, urlAtual = null, saiuEm = 0, tipoAtual = null;
+  ['1','2','3','4','5','6','7','8','9','','0','apagar'].forEach((t) => {
+    const b = document.createElement('button');
+    if (!t) b.className = 'vazio';
+    else if (t === 'apagar') { b.className = 'apagar'; b.textContent = 'Apagar'; b.onclick = () => { pin = pin.slice(0, -1); desenharPontos(); }; }
+    else { b.textContent = t; b.onclick = () => digitar(t); }
+    $('teclado').appendChild(b);
+  });
+  function desenharPontos() { document.querySelectorAll('#pontos span').forEach((s, i) => s.classList.toggle('cheio', i < pin.length)); }
+  async function digitar(n) {
+    const msg = $('msg-pin');
+    if (Date.now() < esperaAte) { msg.textContent = 'Aguarde alguns segundos.'; return; }
+    if (pin.length >= 6) return;
+    pin += n; desenharPontos();
+    if (pin.length < 6) return;
+    msg.textContent = 'Conferindo...';
+    const ok = await abrirAssinatura(pin);
+    pin = ''; desenharPontos();
+    if (ok) { msg.textContent = ''; erros = 0; mostrar('tela-menu'); return; }
+    erros++;
+    const p = $('pontos'); p.classList.remove('tremer'); void p.offsetWidth; p.classList.add('tremer');
+    if (erros >= 5) { esperaAte = Date.now() + 30000; msg.textContent = 'PIN incorreto. Aguarde 30 segundos.'; }
+    else msg.textContent = 'PIN incorreto.';
+  }
+  const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  async function abrirAssinatura(p) {
+    try {
+      const t = await (await fetch('assinatura.json')).json();
+      const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(p), 'PBKDF2', false, ['deriveKey']);
+      const chave = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64(t.sal), iterations: t.iteracoes, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+      assinatura = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(t.iv) }, chave, b64(t.dados)));
+      return true;
+    } catch { return false; }
+  }
+  function mostrar(id) { document.querySelectorAll('.tela').forEach((t) => t.classList.toggle('ativa', t.id === id)); window.scrollTo(0, 0); }
+  function bloquear() { assinatura = null; tipoAtual = null; $('campos').innerHTML = ''; liberarPdf(); mostrar('tela-pin'); }
+  // fora do aplicativo por mais de 5 minutos: pede o PIN de novo e esquece tudo
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) saiuEm = Date.now();
+    else if (assinatura && saiuEm && Date.now() - saiuEm > 5 * 60 * 1000) bloquear();
+  });
+
+  // ---------- formulários ----------
+  const hojeISO = () => { const h = new Date(); return h.getFullYear() + '-' + String(h.getMonth() + 1).padStart(2, '0') + '-' + String(h.getDate()).padStart(2, '0'); };
+  const C = {
+    nome: '<label for="f-nome">Nome</label><input id="f-nome" autocomplete="off" autocapitalize="words">',
+    rgCpf: '<div class="dupla"><div><label for="f-rg">RG</label><input id="f-rg" autocomplete="off"></div><div><label for="f-cpf">CPF</label><input id="f-cpf" inputmode="numeric" placeholder="000.000.000-00" maxlength="14" autocomplete="off"></div></div>',
+  };
+  const FORMS = {
+    encaminhamento: C.nome +
+      '<div class="dupla"><div><label for="f-nascimento">Nascimento</label><input id="f-nascimento" inputmode="numeric" placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off"></div>' +
+      '<div><label for="f-sexo">Sexo</label><select id="f-sexo"><option value=""></option><option>Feminino</option><option>Masculino</option></select></div></div>' +
+      '<label for="f-cpf">CPF</label><input id="f-cpf" inputmode="numeric" placeholder="000.000.000-00" maxlength="14" autocomplete="off">' +
+      '<label for="f-evolucao">Evolução</label><textarea id="f-evolucao"></textarea>' +
+      '<label for="f-encaminhamento">Encaminhamento</label><textarea id="f-encaminhamento"></textarea>',
+    atestado: C.nome + C.rgCpf +
+      '<div class="dupla"><div><label for="f-data">Data da consulta</label><input type="date" id="f-data"></div>' +
+      '<div><label for="f-dias">Dias de afastamento</label><input id="f-dias" inputmode="numeric" maxlength="3" autocomplete="off"></div></div>',
+    declaracao: C.nome + C.rgCpf +
+      '<label for="f-data">Data do comparecimento</label><input type="date" id="f-data">' +
+      '<div class="dupla"><div><label for="f-horaIni">Das</label><input type="time" id="f-horaIni"></div>' +
+      '<div><label for="f-horaFim">Às</label><input type="time" id="f-horaFim"></div></div>',
+    receituario: '<label for="f-texto">Texto</label><textarea id="f-texto" class="grande"></textarea>',
+  };
+  function abrirFormulario(tipo) {
+    tipoAtual = tipo; liberarPdf();
+    $('titulo-form').textContent = MODELOS_DOCUMENTOS[tipo].titulo;
+    $('campos').innerHTML = FORMS[tipo];
+    $('f-dataDoc').value = hojeISO();
+    if ($('f-data')) $('f-data').value = hojeISO();
+    $('erro-form').textContent = '';
+    const nasc = $('f-nascimento'); if (nasc) nasc.addEventListener('input', (e) => { const d = e.target.value.replace(/\D/g, '').slice(0, 8); e.target.value = d.replace(/^(\d{2})(\d)/, '$1/$2').replace(/^(\d{2})\/(\d{2})(\d)/, '$1/$2/$3'); });
+    const cpf = $('f-cpf'); if (cpf) cpf.addEventListener('input', (e) => { const d = e.target.value.replace(/\D/g, '').slice(0, 11); e.target.value = d.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4'); });
+    const dias = $('f-dias'); if (dias) dias.addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 3); });
+    document.querySelectorAll('#tela-form input, #tela-form textarea, #tela-form select').forEach((c) => c.addEventListener('input', () => { $('erro-form').textContent = ''; }));
+    mostrar('tela-form');
+  }
+  function voltarAoMenu() { tipoAtual = null; $('campos').innerHTML = ''; liberarPdf(); mostrar('tela-menu'); }
+  const valor = (id) => ($(id) ? $(id).value.trim() : '');
+
+  async function gerar() {
+    if (!assinatura) { bloquear(); return; }
+    const d = {};
+    ['nome','nascimento','sexo','cpf','rg','evolucao','encaminhamento','data','dias','horaIni','horaFim','texto','dataDoc'].forEach((k) => d[k] = valor('f-' + k));
+    const erro = (m, id) => { $('erro-form').textContent = m; if (id && $(id)) $(id).focus(); };
+    if (tipoAtual !== 'receituario' && !d.nome) return erro('Digite o nome do paciente.', 'f-nome');
+    if (tipoAtual === 'encaminhamento' && !d.evolucao && !d.encaminhamento) return erro('Preencha a evolução ou o encaminhamento.');
+    if (tipoAtual === 'receituario' && !d.texto) return erro('Digite o texto do receituário.', 'f-texto');
+    const btn = $('btn-gerar'); btn.disabled = true; btn.textContent = 'Gerando...';
+    try {
+      const bytes = await gerarDocumentoPDF(tipoAtual, d, assinatura);
+      liberarPdf();
+      const base = { encaminhamento: 'Encaminhamento', atestado: 'Atestado', declaracao: 'Declaracao', receituario: 'Receituario' }[tipoAtual];
+      const quem = d.nome ? '_' + d.nome.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') : '';
+      pdfAtual = new File([bytes], base + quem + '_' + hojeISO() + '.pdf', { type: 'application/pdf' });
+      urlAtual = URL.createObjectURL(pdfAtual);
+      $('previa').src = urlAtual;
+      mostrar('tela-pronto');
+    } catch (e) { erro('Não foi possível gerar o PDF. Tente de novo.'); console.error(e); }
+    btn.disabled = false; btn.textContent = 'Gerar PDF';
+  }
+  function liberarPdf() { if (urlAtual) URL.revokeObjectURL(urlAtual); urlAtual = null; pdfAtual = null; $('previa').removeAttribute('src'); }
+  async function enviar() {
+    if (!pdfAtual) return;
+    if (navigator.canShare && navigator.canShare({ files: [pdfAtual] })) {
+      try { await navigator.share({ files: [pdfAtual], title: pdfAtual.name }); } catch {}
+    } else salvar();
+  }
+  function salvar() { if (!pdfAtual) return; const a = document.createElement('a'); a.href = urlAtual; a.download = pdfAtual.name; document.body.appendChild(a); a.click(); a.remove(); }
+  function novo() { const t = tipoAtual; abrirFormulario(t); }
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
